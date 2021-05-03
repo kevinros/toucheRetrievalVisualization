@@ -2,13 +2,15 @@ import initializer
 import processor
 import searcher
 
+import pickle
 import os
 import hnswlib
 from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder
 from pyserini.search import SimpleSearcher
 
 # corpus paths
-path_to_corpus_dir = ''
+path_to_corpus_dir = 'rawDebatesSmall/'
 
 # pyserini paths
 path_to_corpus_output = 'out/pyserini/processedCorpus/'
@@ -18,16 +20,16 @@ path_to_idx_output = 'out/pyserini/index/'
 path_to_semantic_output = 'out/semantic/'
 
 # run path
-path_to_run_output = 'out/runs'
+path_to_run_output = 'out/runs/'
 
 # embedding models
 semantic_model = SentenceTransformer('msmarco-distilbert-base-v3')
-cross_encoder_model = SentenceTransformer('cross-encoder/ms-marco-TinyBERT-L-6', max_length=512)
+cross_encoder_model = CrossEncoder('cross-encoder/ms-marco-TinyBERT-L-6', max_length=512)
 
 # topic path
-path_to_topics = 'topics-task-1-only-titles.xml'
+path_to_topics = 'metadata/topics-task-1.xml' # note that these are the old titles
 
-setup = True
+setup = False
 evaluate = True
 
 if setup:
@@ -39,7 +41,7 @@ if setup:
     os.mkdir(path_to_semantic_output)
     
     initializer.initializePyserini(path_to_corpus_dir, path_to_corpus_output, path_to_idx_output)
-    initializer.initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model)
+    initializer.initializeSemantic(path_to_corpus_dir, path_to_semantic_output, semantic_model)
 
 if evaluate:
 
@@ -55,9 +57,9 @@ if evaluate:
     docid_to_doc = {}
     for i,pid in enumerate(idx_to_passageid):
         full_docid = pid.split('.')[0]
-        if docid not in docid_to_doc:
-            docid_to_doc[docid] = []
-        docid_to_doc[docid].append(idx_to_passage[i])
+        if full_docid not in docid_to_doc:
+            docid_to_doc[full_docid] = []
+        docid_to_doc[full_docid].append(idx_to_passage[i])
     
     # initialize the bm25 searcher
     pyserini_searcher = SimpleSearcher(path_to_idx_output)
@@ -70,11 +72,11 @@ if evaluate:
     
     # Run BM25
     bm25_run = searcher.bm25Search(pyserini_searcher, topics)
-    writeRelevanceFile(bm25_run, path_to_run_output + 'run.bm25', 'skeletor-bm25')
+    processor.writeRelevanceFile(bm25_run, path_to_run_output + 'run.bm25', 'skeletor-bm25')
 
     # Run semantic search
-    semantic_run = searcher.semanticSearch(model, topics, hnswlib_index, idx_to_passageid)
-    writeRelevanceFile(semantic_run, path_to_run_output + 'run.semantic', 'skeletor-semantic')
+    semantic_run = searcher.semanticSearch(semantic_model, topics, hnswlib_index, idx_to_passageid)
+    processor.writeRelevanceFile(semantic_run, path_to_run_output + 'run.semantic', 'skeletor-semantic')
     
 
     

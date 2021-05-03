@@ -77,9 +77,7 @@ def createPassages(list_of_sentences, max_passage_words=200):
     current_passage = []
     for sentence in list_of_sentences:
         current_passage.append(sentence)
-        print(len(" ".join(current_passage).split()))
         if len(" ".join(current_passage).split()) > max_passage_words:
-            print(current_passage)
             passages.append(" ".join(current_passage))
             current_passage = []
     # get any remaining sentences

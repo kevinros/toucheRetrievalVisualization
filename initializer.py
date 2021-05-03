@@ -22,7 +22,7 @@ def initializePyserini(path_to_corpus_dir, path_to_corpus_output, path_to_idx_ou
     :returns: Nothing
     """
     # Format and rewrite each corpus
-    for corpus_name in os.listdirs(path_to_corpus_dir):
+    for corpus_name in os.listdir(path_to_corpus_dir):
         corpus = json.load(open(path_to_corpus_dir + corpus_name, 'r'))
         documents = []
         for doc in corpus['arguments']:
@@ -34,8 +34,8 @@ def initializePyserini(path_to_corpus_dir, path_to_corpus_output, path_to_idx_ou
     # Run pyserini command to build index
     # I know I know, this is probably the worst way to do it, I should just call the pyserini index directly
     cs_default = "python3 -m pyserini.index -collection JsonCollection -generator DefaultLuceneDocumentGenerator -threads 1"
-    cs_input = "-input " + path_to_corpus_output
-    cs_output = "-index " + path_to_idx_output + " -storePositions -storeDocvectors -storeRaw"
+    cs_input = " -input " + path_to_corpus_output
+    cs_output = " -index " + path_to_idx_output + " -storePositions -storeDocvectors -storeRaw"
     os.system(cs_default + cs_input + cs_output)
     
 
@@ -71,7 +71,7 @@ def initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model):
     index.init_index(max_elements = 700000, ef_construction = 300, M = 64)
 
     # Loop through each corpus, processing the text
-    for corpus_name in os.listdirs(path_to_corpus_dir):
+    for corpus_name in os.listdir(path_to_corpus_dir):
         corpus = json.load(open(path_to_corpus_dir + corpus_name, 'r'))
         print('processing corpus', corpus_name)
         for doc in corpus['arguments']:
@@ -92,6 +92,6 @@ def initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model):
 
     # Finally, the index and lookup arrays are saved to the provided path
     index.save_index(path_to_semantic_output + 'passage.index')
-    pickle.dump(idx_to_docid, open(path_to_semantic_output + 'idx_to_passageids.p', 'wb'))
+    pickle.dump(idx_to_docid, open(path_to_semantic_output + 'idx_to_passageid.p', 'wb'))
     pickle.dump(idx_to_passage, open(path_to_semantic_output + 'idx_to_passage.p', 'wb'))
             

@@ -27,7 +27,7 @@ def semanticSearch(model, topics, index, idx_to_passageid, k=100):
     topic_nums = [topic for topic in topics]
     queries = [topics[topic]['title'] for topic in topics]
     encoded_queries = model.encode(queries)
-    labels, distances = doc_index.knn_query(encoded_queries, k=k)
+    labels, distances = index.knn_query(encoded_queries, k=k)
     for i,topic in enumerate(topic_nums):
         run[topic] = []
         # considers highest passage match only for a document
@@ -67,7 +67,7 @@ def bm25Search(pyserini_searcher, topics, k1=3.2, b=0.15):
         hits = pyserini_searcher.search(query, k=1000)
         # Sometimes, duplicate IDs get added, so this avoids adding duplicates
         # Can be significantly optimized
-        for i in range(1000):
+        for i in range(len(hits)):
             if hits[i].docid not in [x[0] for x in run[topic]]:
-                run[topic].append((hits[i].docid, scores[i]))
+                run[topic].append((hits[i].docid, hits[i].score))
     return run
