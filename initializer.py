@@ -61,7 +61,7 @@ def initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model):
     """
     
     # Lookup arrays for the output idx of knn search 
-    idx_to_docid = []
+    idx_to_passageid = []
     idx_to_passage = []
 
     # Index parameters currently hardcoded, seem to work fine
@@ -81,7 +81,9 @@ def initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model):
             passages = processor.createPassages(sentences)
             # Save both the processed passages, and which document they came from
             idx_to_passage += passages
-            idx_to_docid += [docid] * len(passages)
+            idx_to_passageid += [docid] * len(passages)
+            #for i in range(len(passages)):
+            #    idx_to_passageid.append(docid + '.' + str(i))
 
     # Now that all the passages are made, we can encode them and add them to the index
     # Encode in batches of 1000 to make things a bit faster
@@ -92,6 +94,6 @@ def initializeSemantic(path_to_corpus_dir, path_to_semantic_output, model):
 
     # Finally, the index and lookup arrays are saved to the provided path
     index.save_index(path_to_semantic_output + 'passage.index')
-    pickle.dump(idx_to_docid, open(path_to_semantic_output + 'idx_to_passageid.p', 'wb'))
+    pickle.dump(idx_to_passageid, open(path_to_semantic_output + 'idx_to_passageid.p', 'wb'))
     pickle.dump(idx_to_passage, open(path_to_semantic_output + 'idx_to_passage.p', 'wb'))
             

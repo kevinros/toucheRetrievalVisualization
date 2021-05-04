@@ -1,6 +1,6 @@
 import processor
 
-def semanticSearch(model, topics, index, idx_to_passageid, k=100):
+def semanticSearch(model, topics, index, idx_to_passageid, k=1000):
     """
     Performs semantic similarity search over the corpus
 
@@ -35,9 +35,10 @@ def semanticSearch(model, topics, index, idx_to_passageid, k=100):
         sim = [1-x for x in distances[i]]
         scored_run = zip(labels[i], sim)
         for i, (passageidx, dist) in enumerate(scored_run):
-            docid = idx_to_passageid[passageidx].split('.')[0]
+            docid = idx_to_passageid[passageidx]#.split('.')[0]
+            #print(docid, dist, idx_to_passage[passageidx])
             if docid not in added_docids:
-                run[topic].append((docid, sim))
+                run[topic].append((docid, dist))
                 added_docids.append(docid)
     return run
 
