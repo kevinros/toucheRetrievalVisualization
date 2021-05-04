@@ -59,8 +59,7 @@ if evaluate:
 
     # construct reverse lookup for full document reranking
     docid_to_doc = {}
-    for i,pid in enumerate(idx_to_passageid):
-        full_docid = pid#.split('.')[0]
+    for i,full_docid in enumerate(idx_to_passageid):
         if full_docid not in docid_to_doc:
             docid_to_doc[full_docid] = []
         docid_to_doc[full_docid].append(idx_to_passage[i])
@@ -68,7 +67,7 @@ if evaluate:
     # initialize the bm25 searcher
     pyserini_searcher = SimpleSearcher(path_to_idx_output)
 
-    # create the run directory
+    # create the run directory (uncomment if first time)
     #os.mkdir(path_to_run_output)
 
     # load the topics
@@ -90,14 +89,11 @@ if evaluate:
     processor.writeRelevanceFile(interpolated_bm25_semantic, path_to_run_output + 'run.interpolated.bm25.semantic', 'skeletor-interpolated-bm25-0.7semantic')
     os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.interpolated.bm25.semantic')
 
-
-    #exit()
     
     # Cross encoder reranking
     #ce_bm25_run = reranker.crossEncode(path_to_run_output + 'run.inter.bm25.semantic', cross_encoder_model, topics, docid_to_doc, topk=10)
     #processor.writeRelevanceFile(ce_bm25_run, path_to_run_output + 'run.bm25.semantic.ce', 'bm25-0.7semantic-ce')
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25.semantic.ce')
-    #exit()
     
     # NN rerank
     
