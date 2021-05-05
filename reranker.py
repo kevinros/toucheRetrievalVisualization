@@ -106,7 +106,7 @@ def calcSigma(dist, k, rho):
         psum = sum([math.exp((-1 * max(0, dist_i - rho)) / mid) for dist_i in dist])
 
 
-def nn_pf_manifold(path_to_run, model, topics, index, idx_to_docid, docid_to_doc, rel_docs=5, k=20):
+def nn_pf_manifold(path_to_run, model, topics, index, idx_to_docid, docid_to_doc, rel_docs=3, k=50, rerank_cutoff=None):
     """
     Nearest neighbor pseudo feedback but approximates the manifold like UMAP
     :param path_to_run: path to the run to rerank
@@ -133,6 +133,10 @@ def nn_pf_manifold(path_to_run, model, topics, index, idx_to_docid, docid_to_doc
     :param k: the number of nearest neighbors to return
     :type k: int
 
+    :param rerank_cutoff: if None, then the entire corpus is considered, otherwise only documents in 
+                          path_to_run up to rerank_cutoff are considered
+    :type rerank_cutoff: None or int
+
     :rtype: dict
     :returns: dict of reranked run
     """
@@ -156,16 +160,32 @@ def nn_pf_manifold(path_to_run, model, topics, index, idx_to_docid, docid_to_doc
             sigma = calcSigma(passage_distances, k-1, rho)
             if sigma:
                 edge_weights = [math.exp( (-1 * max(0,dist_i - rho)) / sigma) for dist_i in passage_distances]
-                for edge_weight, label in zip(edge_weights, distances[i][1:]):
+                for edge_weight, label in zip(edge_weights, labels[i][1:]):
                     docid = idx_to_docid[label]
                     if docid not in document_sums:
                         document_sums[docid] = 0
                     document_sums[docid] += edge_weight
+                # add 1 to the original document as well
+                orig_docid = idx_to_docid[labels[i][0]]
+                if orig_docid not in document_sums:
+                    document_sums[orig_docid] = 0
+                document_sums[orig_docid] += 1
             else:
-                print('Error: the calculated sigma approached 0:', passage_distances)
-        # normalize by the length of document, and create list
-        sorted_document_sums = sorted([(docid, document_sums[docid] / len(docid_to_doc[docid])) for docid in document_sums], reverse=True, key=lambda x: x[1])
-        manifold_runs[topic] = sorted_document_sums
+                print('Warning: the calculated sigma approached 0:', passage_distances)
+                #print(passages[i])
+        # create list sorted list, and note we don't normalize by length
+        # assume longer documents have stronger arguments
+        sorted_document_sums = sorted([(docid, document_sums[docid]) for docid in document_sums], reverse=True, key=lambda x: x[1])
+        if rerank_cutoff:
+            top_orig_docs = [docid[0] for docid in run[topic][:rerank_cutoff]]
+            for doc in sorted_document_sums:
+                if doc[0] in top_orig_docs:
+                    # hack to make sure the manifold documents are ranked the highest
+                    manifold_runs[topic].append((doc[0],doc[1] * 100))
+            manifold_runs[topic] += run[topic][rerank_cutoff:]
+            manifold_runs[topic] = manifold_runs[topic][:1000]
+        else:            
+            manifold_runs[topic] = sorted_document_sums[:1000]
     return manifold_runs
 
 def nn_pf(path_to_run, model, topics, index, idx_to_docid, docid_to_doc, rel_docs=5, k=20):
@@ -255,7 +275,7 @@ def interpolate(path_to_run1, path_to_run2, alpha):
 
         interpolated_topic_run = sorted([(doc, interpolated_topic_run[doc]) for doc in interpolated_topic_run], reverse=True, key=lambda x:x[1])
             
-        interpolated_runs[topic] = interpolated_topic_run
+        interpolated_runs[topic] = interpolated_topic_run[:1000]
     return interpolated_runs
 
         

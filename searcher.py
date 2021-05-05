@@ -40,6 +40,7 @@ def semanticSearch(model, topics, index, idx_to_passageid, k=1000):
             if docid not in added_docids:
                 run[topic].append((docid, dist))
                 added_docids.append(docid)
+        run[topic] = run[topic][:1000]
     return run
 
 
