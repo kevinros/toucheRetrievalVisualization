@@ -63,12 +63,12 @@ if setup:
     hnswlib_index.load_index(path_to_semantic_output + 'passage.index')
     hnswlib_index.set_ef(1100)
     
-    idx_to_passageid = pickle.load(open(path_to_semantic_output + 'idx_to_passageid.p', 'rb'))
+    idx_to_docid = pickle.load(open(path_to_semantic_output + 'idx_to_passageid.p', 'rb'))
     idx_to_passage = pickle.load(open(path_to_semantic_output + 'idx_to_passage.p', 'rb'))
 
     # construct reverse lookup for full document reranking
     docid_to_doc = {}
-    for i,full_docid in enumerate(idx_to_passageid):
+    for i,full_docid in enumerate(idx_to_docid):
         if full_docid not in docid_to_doc:
             docid_to_doc[full_docid] = []
         docid_to_doc[full_docid].append(idx_to_passage[i])
@@ -91,7 +91,7 @@ if evaluate:
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25')
 
     # Run semantic search
-    semantic_run = searcher.semanticSearch(semantic_model, topics, hnswlib_index, idx_to_passageid)
+    semantic_run = searcher.semanticSearch(semantic_model, topics, hnswlib_index, idx_to_docid)
     processor.writeRelevanceFile(semantic_run, path_to_run_output + 'run.semantic', 'semantic')
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.semantic')
 
@@ -103,37 +103,16 @@ if evaluate:
    
 
     # NN manifold rerank no cutoff
-    manifold_run = reranker.nn_pf_manifold(path_to_run_output + 'run.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_passageid, docid_to_doc)
+    manifold_run = reranker.nn_pf_manifold(path_to_run_output + 'run.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_docid, docid_to_doc)
     processor.writeRelevanceFile(manifold_run, path_to_run_output + 'run.bm25.semantic.manifold', 'manifold')
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25.semantic.manifold')
 
     # NN manifold rerank with 10 cutoff
-    manifold_run_c10 = reranker.nn_pf_manifold(path_to_run_output + 'run.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_passageid, docid_to_doc, rerank_cutoff=10)
+    manifold_run_c10 = reranker.nn_pf_manifold(path_to_run_output + 'run.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_docid, docid_to_doc, rerank_cutoff=10)
     processor.writeRelevanceFile(manifold_run_c10, path_to_run_output + 'run.bm25.semantic.manifold_c10', 'manifold-c10')
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25.semantic.manifold_c10')
 
-    """
-    Additional methods that are not currently used
-
-    #Cross encoder reranking
-    ce_bm25_run = reranker.crossEncode(path_to_run_output + 'run.inter.bm25.semantic', cross_encoder_model, topics, docid_to_doc, topk=10)
-    processor.writeRelevanceFile(ce_bm25_run, path_to_run_output + 'run.bm25.semantic.ce', 'bm25-0.7semantic-ce')
-    os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25.semantic.ce')
-
-    # NN rerank
-    nn_bm25_run = reranker.nn_pf(path_to_run_output + 'run.interpolated.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_passageid, docid_to_doc)
-    processor.writeRelevanceFile(nn_bm25_run, path_to_run_output + 'run.interpolated.bm25.semantic.nn', 'nn')
-    os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.interpolated.bm25.semantic.nn')
-    
-    # Interpolate
-    for alpha in [0.1, 0.3, 0.5, 0.7]:
-        print(alpha)
-        inter_run = reranker.interpolate(path_to_run_output + 'run.interpolated.bm25.semantic', path_to_run_output + 'run.interpolated.bm25.semantic.manifold', alpha)
-        processor.writeRelevanceFile(inter_run, path_to_run_output + 'run.inter.manifold', 'interpolated.manifold')
-        os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.inter.manifold')
-    """
-
-    
+        
 if view:
     #given a run and an topic, print the top 10 most relevant documents
     bm25_run_path = path_to_run_output + 'run.bm25'
