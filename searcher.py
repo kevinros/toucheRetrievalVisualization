@@ -1,6 +1,6 @@
 import processor
 
-def semanticSearch(model, topics, index, idx_to_passageid, k=1000):
+def semanticSearch(model, topics, index, idx_to_docid, k=1000):
     """
     Performs semantic similarity search over the corpus
 
@@ -13,8 +13,8 @@ def semanticSearch(model, topics, index, idx_to_passageid, k=1000):
     :param index: the hnswlib knn index
     :type index: hnswlib.Index
 
-    :param idx_to_passageid: map from hnswlib index output to passage id
-    :type idx_to_passageid: array
+    :param idx_to_docid: map from hnswlib index output to doc id
+    :type idx_to_docid: array
 
     :param k: number of neighbors to retrieve (default=100)
     :type k: int
@@ -35,8 +35,8 @@ def semanticSearch(model, topics, index, idx_to_passageid, k=1000):
         sim = [1-x for x in distances[i]]
         scored_run = zip(labels[i], sim)
         for i, (passageidx, dist) in enumerate(scored_run):
-            docid = idx_to_passageid[passageidx]#.split('.')[0]
-            #print(docid, dist, idx_to_passage[passageidx])
+            docid = idx_to_docid[passageidx]
+            
             if docid not in added_docids:
                 run[topic].append((docid, dist))
                 added_docids.append(docid)
