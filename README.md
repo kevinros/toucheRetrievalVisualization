@@ -35,9 +35,14 @@ k = 3, knn = 50, j = 10
 
 ### How to reproduce the runs
 1) Clone the repository
-2) Install the required python packages
-3) In main.py, set the "initialize", "setup", and "evaluate" flags to True 
-4) Run python3 main.py
-
+2) Install the required python packages (in requirements.txt)
+3) Set corpus_path in main.py to point to the directory containing the unzipped json debate corpora
+4) In main.py, set the "initialize", "setup", and "evaluate" flags to True 
+5) Run the main.py script
 
 ### Description of files
+- main.py : main script to reproduce runs
+- initializer.py : helper methods to initialize the Pyserini and semantic indices
+- processor.py : helper methods to load topics, write to run files, and to create passages
+- searcher.py : provides the methods for bm25 Pyserini search and semantic knn search
+- reranker.py : provides the methods to rerank runs using manifold approximation, and to interpolate runs
