@@ -29,6 +29,9 @@ cross_encoder_model = CrossEncoder('cross-encoder/ms-marco-TinyBERT-L-6', max_le
 
 # topic path
 path_to_topics = 'metadata/topics-task-1.xml' # note that these are the old titles
+#path_to_topics = 'metadata/topics-task-1-only-titles.xml'
+
+
 
 # relevance scores path
 path_to_qrels = 'metadata/touche2020-task1-relevance-args-me-corpus-version-2020-04-01-corrected.qrels'
@@ -72,6 +75,9 @@ if evaluate:
 
     # load the topics
     topics = processor.load_topics(path_to_topics)
+
+
+    """
     
     # Run BM25
     bm25_run = searcher.bm25Search(pyserini_searcher, topics)
@@ -101,6 +107,14 @@ if evaluate:
     processor.writeRelevanceFile(nn_bm25_run, path_to_run_output + 'run.interpolated.bm25.semantic.nn', 'nn')
     os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.interpolated.bm25.semantic.nn')
     
+    """
+
+    # NN manifold rerank
+    manifold_run = reranker.nn_pf_manifold(path_to_run_output + 'run.interpolated.bm25.semantic', semantic_model, topics, hnswlib_index, idx_to_passageid, docid_to_doc)
+    processor.writeRelevanceFile(nn_bm25_run, path_to_run_output + 'run.interpolated.bm25.semantic.manifold', 'manifold')
+    os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.interpolated.bm25.semantic.manifold')
+
+    exit()
     
     # Interpolate
     for alpha in [0.1, 0.3, 0.5, 0.7]:

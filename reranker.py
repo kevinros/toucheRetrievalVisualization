@@ -1,3 +1,5 @@
+import math
+
 def loadRun(path_to_run):
     """
     Loads run into dict, where key is topic and value is array of (docid, score) tuples
@@ -60,10 +62,115 @@ def crossEncode(path_to_run, cross_encoder, topics, docid_to_doc, topk=20):
         sorted_run = sorted(reranked_run, reverse=True, key=lambda x: x[1])
         run[topic] = sorted_run
     return run
-        
-# umap search
+
+def calcSigma(dist, k, rho):
+    """
+    Helper function for nn_pf_manifold
+    Calculates (approximates) sigma, the distance normalizer for the manifold given a point
+    
+    :param dist: the distances to the k nearest neighbors
+    :type dist: array of floats
+
+    :param k: the number of nearest neighbors
+    :type k: int
+
+    :param rho: the distance to the closest nearest neighbor
+    :type rho: float
+
+    :rtype: float
+    :returns: sigma, distance metric for local manifold
+    """
+
+    low = 0.0
+    high = 1000
+    mid = 1.0
+    
+    goal = math.log2(k)
+    # The acceptable difference between our guess and the ideal psum
+    tolorance = 0.0005
+
+    psum = sum([math.exp((-1 * max(0, dist_i - rho)) / mid) for dist_i in dist])
+    while True:
+        # Sometimes, it may not converge (many points of same distance)
+        if mid < 0.0000000000000001:
+            return False
+
+        if abs(psum-goal) < tolorance:
+            return mid
+        elif psum > goal:
+            high = mid
+            mid = (low+high) / 2.0
+        else:
+            low = mid
+            mid = (low+high) / 2.0
+        psum = sum([math.exp((-1 * max(0, dist_i - rho)) / mid) for dist_i in dist])
+
+
+def nn_pf_manifold(path_to_run, model, topics, index, idx_to_docid, docid_to_doc, rel_docs=5, k=20):
+    """
+    Nearest neighbor pseudo feedback but approximates the manifold like UMAP
+    :param path_to_run: path to the run to rerank
+    :type path_to_run: str
+
+    :param model: the semantic encoder
+    :type model: SentenceTransformer
+
+    :param topics: dict of the topics
+    :type topics: dict
+
+    :param index: the hnswlib index for knn search
+    :type index:
+
+    :param idx_to_docid: the mapping between the hnswlib index output and the docid
+    :type idx_to_docid: array
+
+    :param docid_to_doc: the mapping between docid and the text in the doc
+    :type docid_to_doc: dict
+
+    :param rel_docs: number of relevant docs to gather passages from
+    :type rel_docs: int
+
+    :param k: the number of nearest neighbors to return
+    :type k: int
+
+    :rtype: dict
+    :returns: dict of reranked run
+    """
+
+    run = loadRun(path_to_run)
+    manifold_runs = {}
+    for topic in run:
+        manifold_runs[topic] = []
+        passages = []
+        for docid,_ in run[topic][:rel_docs]:
+            passages += docid_to_doc[docid]
+        encoded_passages = model.encode(passages)
+        labels, distances = index.knn_query(encoded_passages, k=k)
+        document_sums = {}
+        for i in range(len(encoded_passages)):
+            # Ignore the distance to the passage itself
+            passage_distances = distances[i][1:]
+            # Find the closest point
+            rho = min(passage_distances)
+            # k-1 since we ignored the passage itself
+            sigma = calcSigma(passage_distances, k-1, rho)
+            if sigma:
+                edge_weights = [math.exp( (-1 * max(0,dist_i - rho)) / sigma) for dist_i in passage_distances]
+                for edge_weight, label in zip(edge_weights, distances[i][1:]):
+                    docid = idx_to_docid[label]
+                    if docid not in document_sums:
+                        document_sums[docid] = 0
+                    document_sums[docid] += edge_weight
+            else:
+                print('Error: the calculated sigma approached 0:', passage_distances)
+        # normalize by the length of document, and create list
+        sorted_document_sums = sorted([(docid, document_sums[docid] / len(docid_to_doc[docid])) for docid in document_sums], reverse=True, key=lambda x: x[1])
+        manifold_runs[topic] = sorted_document_sums
+    return manifold_runs
+
 def nn_pf(path_to_run, model, topics, index, idx_to_docid, docid_to_doc, rel_docs=5, k=20):
     """
+    Nearest neighbor pseudo feedback
     Assumes the top rel_docs are relevant, then does a k-nn search for all passages in those documents,
     and aggregates the scores of the similar passages
 
