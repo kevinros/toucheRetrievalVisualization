@@ -36,9 +36,10 @@ k = 3, knn = 50, j = 10
 ### How to reproduce the runs
 1) Clone the repository
 2) Install the required python packages (in requirements.txt)
-3) Set corpus_path in main.py to point to the directory containing the unzipped json debate corpora
-4) In main.py, set the "initialize", "setup", and "evaluate" flags to True 
-5) Run the main.py script
+3) In main.py, set corpus_path to point to the directory containing the unzipped json debate corpora
+4) In main.py, set the topic_path to the desired topic file (if last year's, then the trec_evals can be uncommented, but need to specify trec_eval dir path)
+5) In main.py, set the "initialize", "setup", and "evaluate" flags to True 
+6) Run the main.py script
 
 ### Description of files
 - main.py : main script to reproduce runs
