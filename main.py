@@ -36,10 +36,12 @@ path_to_topics = 'metadata/topics-task-1-only-titles.xml'
 # relevance scores path
 path_to_qrels = 'metadata/touche2020-task1-relevance-args-me-corpus-version-2020-04-01-corrected.qrels'
 
-setup = False
-evaluate = True
+initialize = False
+setup = True
+evaluate = False
+view = True
 
-if setup:
+if initialize:
     os.mkdir('out')
     os.mkdir('out/pyserini')
     os.mkdir(path_to_corpus_output)
@@ -50,7 +52,7 @@ if setup:
     initializer.initializePyserini(path_to_corpus_dir, path_to_corpus_output, path_to_idx_output)
     initializer.initializeSemantic(path_to_corpus_dir, path_to_semantic_output, semantic_model)
 
-if evaluate:
+if setup:
 
     # load the semantic knn index + passage lookup files
     hnswlib_index = hnswlib.Index(space = 'cosine', dim=768)
@@ -76,7 +78,7 @@ if evaluate:
     # load the topics
     topics = processor.load_topics(path_to_topics)
 
-
+if evaluate:
     
     
     # Run BM25
@@ -107,7 +109,7 @@ if evaluate:
     #os.system('../trec_eval/./trec_eval -m ndcg_cut.20 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.bm25.semantic.manifold_c10')
 
     """
-    Additional methods
+    Additional methods that are not currently used
 
     #Cross encoder reranking
     ce_bm25_run = reranker.crossEncode(path_to_run_output + 'run.inter.bm25.semantic', cross_encoder_model, topics, docid_to_doc, topk=10)
@@ -126,3 +128,19 @@ if evaluate:
         processor.writeRelevanceFile(inter_run, path_to_run_output + 'run.inter.manifold', 'interpolated.manifold')
         os.system('../trec_eval/./trec_eval -m ndcg_cut.5 ' + path_to_qrels + ' ' +  path_to_run_output + 'run.inter.manifold')
     """
+
+    
+if view:
+    #given a run and an topic, print the top 10 most relevant documents
+    bm25_run_path = path_to_run_output + 'run.bm25'
+    semantic_run_path = path_to_run_output + 'run.semantic'
+    bm25_semantic_run_path = path_to_run_output + 'run.bm25.semantic'
+    manifold_run_path = path_to_run_output + 'run.bm25.semantic.manifold'
+    manifold_c10_run_path = path_to_run_output + 'run.bm25.semantic.manifold_c10'
+
+    topic = '91'
+    for path_to_run in [bm25_run_path]:
+         run = reranker.loadRun(path_to_run)[topic]
+         print(topics[topic]['title'])
+         for docid,_ in run[:5]:
+             print(docid_to_doc[docid])
