@@ -226,22 +226,22 @@ with open(path_to_transcript) as f:
 start_idx = time.index('110:53')
         
 docs = []
-for i,(segment, timestamp) in enumerate(zip(text[start_idx: start_idx + 500], time[start_idx: start_idx + 500])):
+for i,(segment, timestamp) in enumerate(zip(text[start_idx: start_idx + 100], time[start_idx: start_idx + 100])):
     print(i,segment)
     x.addToTranscript(segment, timestamp=timestamp)
     
     #docs = list(set(docs + x.getTopDocs(i)))
-#docs = x.findFreqDocs(0,100, topn=5)
-docs = x.findDocsByKeyword(["bible god creationism", "heavens astronomy stars"], topn=5)
+docs = x.findFreqDocs(0,99, topn=100)
+#docs = x.findDocsByKeyword(["bible god creationism", "heavens astronomy stars"], topn=5)
 print(docs)
-docs = [docid for doc in docs for docid in doc[1]]
+#docs = [docid for doc in docs for docid in doc[1]]
 with open(x.out_dir + 'docs.json', 'w') as f:
     for doc in docs:
         f.write(x.searcher.doc(doc).raw())
-rankings = x.plotDocRankings(0, 100, docs)
+#rankings = x.plotDocRankings(0, 100, docs)
 #rankings = x.plotDocRankings(100, 200, docs)
 #rankings = x.plotDocRankings(200, 300, docs)
 #rankings = x.plotDocRankings(300, 400, docs)
 #rankings = x.plotDocRankings(400, 499, docs)
-#x.caterpillarEncode(0, 499, docs)
+x.caterpillarEncode(0, 99, docs)
 
