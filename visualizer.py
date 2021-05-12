@@ -26,9 +26,9 @@ class Visualizer:
         self.history = []
 
         # The number of transcript entries to group when searching
-        self.lookback = 10
+        self.lookback = 5
         # The number of documents to return per search
-        self.knn = 20
+        self.knn = 100
 
     def addToTranscript(self, text, timestamp=None):
         """
@@ -115,24 +115,56 @@ class Visualizer:
         for i in range(start_idx, end_idx+1):
             for doc in docs:
                 if doc in self.history[i]['docs']:
-                    docs[doc].append(self.knn - self.history[i]['docs'][doc]['position'])
+                    docs[doc].append(self.history[i]['docs'][doc]['position'])
                 else:
-                    docs[doc].append(0)
+                    docs[doc].append(self.knn)
 
         
         x = self.transcript_time[start_idx:end_idx+1]
-
-        fig=plt.figure(figsize=(100,10))
+        
+        fig=plt.figure(figsize=(int((end_idx-start_idx) / 5),10))
         for doc in docs:
             plt.plot(x, docs[doc], label=doc)
         plt.xticks(rotation=45)
+
+        ax = plt.gca()
+
+        for index, label in enumerate(ax.xaxis.get_ticklabels()):
+            if index % 4 != 0:
+                label.set_visible(False)
+        ax.invert_yaxis()
+
         plt.legend()
+
+        
+
         plt.savefig(self.out_dir + 'docrankingsplot_' + str(start_idx) + '_' + str(end_idx+1) + '.png')
         
                     
 
         return docs
-            
+
+    def findDocsByKeyword(self, keywords_list, topn=5):
+        """
+        For each grouping of words in keyword_list, returns the topn doc ids
+        
+        :param keywords_list: independent strings of keywords to search
+        :type keywords_list: list of strings
+        
+        :param topn: the number of documents to return for each keyword grouping
+        :type topn: int
+
+        :rtype: list of (keywords, list of doc ids) tuples
+        :returns: pairs of keywords,document ids
+        """
+        docs = []
+        for keywords in keywords_list:
+            hits = self.searcher.search(keywords, k=topn)
+            doc_ids = [hit.docid for hit in hits]
+            docs.append((keywords, doc_ids))
+        return docs
+        
+    
     def caterpillarEncode(self, start_idx, end_idx, docs, window=10, stride=1):
         """
         Splits sentences of docs, semantically embeds them
@@ -143,11 +175,9 @@ class Visualizer:
         doc_text = []
         doc_map = []
         for doc in docs:
-            text = json.loads(x.searcher.doc(doc).raw())['contents'].split('. ') # crude preprocessing
-            print(text)
+            text = json.loads(self.searcher.doc(doc).raw())['contents'].split('. ') # crude preprocessing
             for sentence in text:
                 if len(sentence.split()) > 10:
-                    print(sentence)
                     doc_text.append(sentence)
                     doc_map.append(doc)
 
@@ -157,7 +187,10 @@ class Visualizer:
         for i in range(start_idx, end_idx - window):
             transcript_windows.append(" ".join(self.transcript[i:i+window]))
             transcript_time.append(self.transcript_time[i] + ' - ' + self.transcript_time[i+window])
+            transcript_windows.append(" ".join(self.transcript[i:i+window+1]))
+            transcript_time.append(self.transcript_time[i] + ' - ' + self.transcript_time[i+window+1])
 
+            
         # merge and encode
         sentences = doc_text + transcript_windows
         labels = doc_map + transcript_time
@@ -190,24 +223,25 @@ with open(path_to_transcript) as f:
         time.append(content[i])
         text.append(content[i+1])
 
+start_idx = time.index('110:53')
+        
 docs = []
-for i,(segment, timestamp) in enumerate(zip(text[0:1000], time[0:1000])):
+for i,(segment, timestamp) in enumerate(zip(text[start_idx: start_idx + 500], time[start_idx: start_idx + 500])):
     print(i,segment)
     x.addToTranscript(segment, timestamp=timestamp)
     
     #docs = list(set(docs + x.getTopDocs(i)))
-docs = x.findFreqDocs(0,990, topn=20)
-rankings = x.plotDocRankings(0,990, docs)
-x.caterpillarEncode(0, 990, docs)
-exit()
+#docs = x.findFreqDocs(0,100, topn=5)
+docs = x.findDocsByKeyword(["bible god creationism", "heavens astronomy stars"], topn=5)
+print(docs)
+docs = [docid for doc in docs for docid in doc[1]]
+with open(x.out_dir + 'docs.json', 'w') as f:
+    for doc in docs:
+        f.write(x.searcher.doc(doc).raw())
+rankings = x.plotDocRankings(0, 100, docs)
+#rankings = x.plotDocRankings(100, 200, docs)
+#rankings = x.plotDocRankings(200, 300, docs)
+#rankings = x.plotDocRankings(300, 400, docs)
+#rankings = x.plotDocRankings(400, 499, docs)
+#x.caterpillarEncode(0, 499, docs)
 
-for doc in docs:
-    print(doc)
-    print(x.searcher.doc(doc).raw())
-
-exit()
-docs =  x.findFreqDocs(0,1000)
-sorted_docs = sorted([(doc, docs[doc]) for doc in docs], reverse=True, key=lambda x: x[1])
-for docid in sorted_docs[:5]:
-    print(docid)
-    print(x.searcher.doc(docid[0]).raw())
